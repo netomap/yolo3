@@ -68,11 +68,11 @@ class YOLO_LOSS(nn.Module):
         # ======================= CALCULO PERDA PARA CLASSES  ================================
         # No paper, a função perda para as classes é definida como um mse simples. Ao contrário
         # do que se usa para classificação de imagem (multiclasse), que normalmente é softmax.
-        classes_predictions = predictions[:,:,:, 1:1+C]
-        classes_targets = targets[:,:,:,1:1+C]
+        classes_predictions = predictions[:,:,:, 1:1+self.C]
+        classes_targets = targets[:,:,:,1:1+self.C]
         classes_loss = self.mse(
-            classes_predictions.reshape((-1, C)), 
-            classes_targets.reshape((-1, C))
+            classes_predictions.reshape((-1, self.C)), 
+            classes_targets.reshape((-1, self.C))
         )
         # ======================= CALCULO PERDA PARA CLASSES  ================================
 
