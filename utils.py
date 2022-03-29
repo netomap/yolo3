@@ -51,7 +51,7 @@ def predict(model, img_pil, transformer, prob_threshold, print_grid):
 
     return img_pil, bboxes
 
-def salvar_resultado_uma_epoca(model, dataset, epoch, device, save_img=True):
+def salvar_resultado_uma_epoca(model, dataset, epoch, device, prob_threshold, save_img=True):
     r"""
     Faz uma simples predição em uma imagem do conjunto de teste.  
     E salva na pasta ./results a imagem com as bboxes preditas pelo modelo.
@@ -82,7 +82,7 @@ def salvar_resultado_uma_epoca(model, dataset, epoch, device, save_img=True):
     S = model.S
     C = model.C
     predictions = predictions.reshape((S, S, (5+C)))
-    img_pil, bboxes = desenhar_anotacoes(img_pil, predictions, S, C)
+    img_pil, bboxes = desenhar_anotacoes(img_pil, predictions, S, C, prob_threshold=prob_threshold)
 
     if (save_img):
         img_pil.save(f'./results/result_{epoch}_epoch.jpg')
