@@ -62,7 +62,7 @@ class yolo_dataset(Dataset):
 
             if (target_labels[i, j, 0] == 0):
                 target_labels[i, j] = torch.hstack([torch.tensor([1]), torch.tensor(vetor_classes), torch.tensor([xc_rel, yc_rel, w_rel, h_rel])])
-                #target_labels[i, j] = torch.tensor([1, xc_rel, yc_rel, w_rel, h_rel])
+                # conforme a imagem formato_saida_classe_dataset.py
         
         return target_labels
 
