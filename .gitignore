@@ -1,0 +1,6 @@
+models/
+imgs/
+results/
+__pycache__/
+testes.ipynb
+annotations.csv
