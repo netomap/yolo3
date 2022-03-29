@@ -80,6 +80,6 @@ for epoch in range(EPOCHS):
     test_loss = validacao(model, yolo_loss, test_dataloader, device)
     print (f'Epoch: [{epoch}], train_loss: {round(train_loss, 3)}, test_loss: {round(test_loss, 3)}')
     salvar_checkpoint(model, epoch)
-    _, _ = salvar_resultado_uma_epoca(model, test_dataset, epoch, device)
+    _, _ = salvar_resultado_uma_epoca(model, test_dataset, epoch, device, 0.1)
 
 print ('fim treinamento')
