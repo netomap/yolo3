@@ -28,9 +28,9 @@ class YOLO(nn.Module):
 
         self.net = nn.Sequential(
             backbone, 
-            nn.Linear(in_features=in_features_linear, out_features=1024),
+            nn.Linear(in_features=in_features_linear, out_features=1024*2),
             nn.LeakyReLU(),
-            nn.Linear(in_features=1024, out_features=1024),
+            nn.Linear(in_features=1024*2, out_features=1024),
             nn.LeakyReLU(),
             nn.Linear(in_features=1024, out_features=(self.S * self.S * (1 + 4 + self.C)))
         )

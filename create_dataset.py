@@ -12,7 +12,17 @@ def random_color(clara=True):
     return (randint(valor_min, valor_max), randint(valor_min, valor_max), randint(valor_min, valor_max))
 
 def create_image(n_objects = 1):
+    r"""
+    Cria uma imagem com n_objects em posições, largura, altura, cores e tipos aleatórios.
 
+    Args:  
+        n_objetcs: Número de objetos desejados.
+    
+    Returns:  
+        img_pil: uma imagem com os objetos desenhados.
+        bboxes: as anotações de cada objeto, no formato: [imgw, imgh, tipo, xc/imgw, yc/imgh, w/imgw, h/imgh]
+    
+    """
     imgw, imgh = randint(200, 300), randint(200, 300)
     img_pil = Image.new('RGB', size=(imgw, imgh), color='white')
     draw = ImageDraw.Draw(img_pil)
