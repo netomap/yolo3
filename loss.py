@@ -68,13 +68,24 @@ class YOLO_LOSS(nn.Module):
         # ======================= CALCULO PERDA PARA CLASSES  ================================
         # No paper, a função perda para as classes é definida como um mse simples. Ao contrário
         # do que se usa para classificação de imagem (multiclasse), que normalmente é softmax.
-        classes_predictions = predictions[:,:,:, 1:1+self.C]
-        classes_targets = targets[:,:,:,1:1+self.C]
+        classes_predictions = exists_box * predictions[:,:,:, 1:1+self.C]
+        classes_targets = exists_box * targets[:,:,:,1:1+self.C]
         classes_loss = self.mse(
             classes_predictions.reshape((-1, self.C)), 
             classes_targets.reshape((-1, self.C))
         )
         # ======================= CALCULO PERDA PARA CLASSES  ================================
+
+        # ============= CALCULO PERDA PARA CLASSES EM GRID SEM OBJETO ========================
+        # No paper, a função perda para as classes é definida como um mse simples. Ao contrário
+        # do que se usa para classificação de imagem (multiclasse), que normalmente é softmax.
+        no_obj_classes_predictions = no_exists_box * predictions[:,:,:, 1:1+self.C]
+        no_obj_classes_targets = no_exists_box * targets[:,:,:,1:1+self.C]
+        no_obj_classes_loss = self.mse(
+            no_obj_classes_predictions.reshape((-1, self.C)), 
+            no_obj_classes_targets.reshape((-1, self.C))
+        )
+        # ============= CALCULO PERDA PARA CLASSES EM GRID SEM OBJETO ========================
 
         # ====================== CALCULO PARA PROBABILIDADE DE DETECAÇÃO DE OBJETO ===========
         prob_exists_prediction = exists_box * predictions[:,:,:,0].unsqueeze(3)
@@ -84,21 +95,12 @@ class YOLO_LOSS(nn.Module):
             prob_exists_target.reshape(-1, 1)
         )
         # ====================== CALCULO PARA PROBABILIDADE DE DETECAÇÃO DE OBJETO ===========
-
-        # ================= CALCULO PARA PROBABILIDADE DE NÃO DETECAÇÃO DE OBJETO ============
-        prob_no_exists_prediction = no_exists_box * predictions[:,:,:,0].unsqueeze(3)
-        prob_no_exists_target = no_exists_box * targets[:,:,:,0].unsqueeze(3)
-        prob_noobj_loss = self.mse(
-            prob_no_exists_prediction.reshape(-1, 1),
-            prob_no_exists_target.reshape(-1, 1)
-        )
-        # ================= CALCULO PARA PROBABILIDADE DE NÃO DETECAÇÃO DE OBJETO ============
         
         loss = (
             box_loss * self.lambda_coord
-            + prob_exists_loss * self.lambda_obj
-            + prob_noobj_loss * self.lambda_noobj
             + classes_loss
+            + no_obj_classes_loss * self.lambda_noobj
+            + prob_exists_loss
         )
 
         # print (f'box_loss: {box_loss.item()}, exists_loss: {prob_exists_loss.item()}, noobj_loss: {prob_noobj_loss.item()}, classes_loss: {classes_loss.item()}')
