@@ -4,7 +4,7 @@ import pandas as pd
 
 class YOLO_LOSS(nn.Module):
 
-    def __init__(self, S, B, C, IMG_SIZE, lambda_coord, lambda_obj, lambda_noobj):
+    def __init__(self, S, B, C, IMG_SIZE, lambda_coord, lambda_noobj):
         super(YOLO_LOSS, self).__init__()
         r"""
         Função que calcula a perda entre o predito pela rede YOLO e a sua target. 
@@ -28,7 +28,6 @@ class YOLO_LOSS(nn.Module):
         self.img_size = IMG_SIZE
         self.mse = nn.MSELoss(reduction='sum')
         self.lambda_coord = lambda_coord
-        self.lambda_obj = lambda_obj
         self.lambda_noobj = lambda_noobj
 
     def forward(self, predictions, targets):
@@ -123,7 +122,7 @@ if __name__ == '__main__':
 
     ma = model_architeture()
     model = YOLO(S, C, B, IMG_SIZE, ma.architecture_config)
-    yolo_loss = YOLO_LOSS(S, B, C, IMG_SIZE, 1, 1, 1)
+    yolo_loss = YOLO_LOSS(S, B, C, IMG_SIZE, 1, 1)
     df = pd.read_csv('annotations.csv')
     imgs_list = df['img_path'].unique()
     dataset = yolo_dataset(S, B, C, IMG_SIZE, imgs_list)

@@ -20,8 +20,8 @@ parser.add_argument('--testsize', type=float, default=0.1, help='Tamanho (em per
 parser.add_argument('--lr', type=float, default=1e-3, help='LEARNING RATE')
 parser.add_argument('--e', type=int, default=10, help='Número de épocas para treinamento')
 parser.add_argument('--lc', type=float, default=5, help='Taxa de penalização para a perda das coordenadas.')
-parser.add_argument('--lo', type=float, default=1, help='Taxa de penalização para a perda quando encontra algum objeto.')
 parser.add_argument('--lno', type=float, default=0.5, help='Taxa de penalização para a perda quando não encontra objeto.')
+parser.add_argument('--cs', type=float, default=0.5, help='Confiança na predição do objeto detectado.')
 
 args = parser.parse_args()
 print (args)
@@ -35,8 +35,8 @@ TEST_SIZE = args.testsize
 LEARNING_RATE = args.lr
 EPOCHS = args.e
 lambda_coord = args.lc
-lambda_obj = args.lo
 lambda_noobj = args.lno
+confidence_score = args.cs
 
 # ==================== DISPOSITIVO PARA TREINO ============================================
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -49,7 +49,7 @@ train_dataset, test_dataset, train_dataloader, test_dataloader = preparar_datase
 # ==================== PREPARAÇÃO DO DATASET ==============================================
 
 # ==================== PREPARAÇÃO DA FUNÇÃO PERDA =========================================
-yolo_loss = YOLO_LOSS(S, B, C, IMG_SIZE, lambda_coord, lambda_obj, lambda_noobj)
+yolo_loss = YOLO_LOSS(S, B, C, IMG_SIZE, lambda_coord, lambda_noobj)
 yolo_loss.to(device)
 # ==================== PREPARAÇÃO DA FUNÇÃO PERDA =========================================
 
@@ -80,6 +80,6 @@ for epoch in range(EPOCHS):
     test_loss = validacao(model, yolo_loss, test_dataloader, device)
     print (f'Epoch: [{epoch}], train_loss: {round(train_loss, 3)}, test_loss: {round(test_loss, 3)}')
     salvar_checkpoint(model, epoch)
-    _, _ = salvar_resultado_uma_epoca(model, test_dataset, epoch, device, 0.4)
+    _, _ = salvar_resultado_uma_epoca(model, test_dataset, epoch, device, confidence_score)
 
 print ('fim treinamento')

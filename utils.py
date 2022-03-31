@@ -129,7 +129,7 @@ def desenhar_anotacoes(img_pil, predictions_tensor, S, C, prob_threshold = 0.5, 
             prob_class = prob_class.item()    # apenas retornando os valores normais, não o tensor
             indice_class = indice_class.item() # o mesmo de cima
 
-            if (prob_obj >= prob_threshold):
+            if (prob_class >= prob_threshold):
                 contador += 1
                 xc_rel, yc_rel, w_rel, h_rel = predictions_tensor[l,c,1+C:]*cell_size # pega os quatro últimos valores que são coordenadas
                 x1_cell, y1_cell = c*cell_size, l*cell_size                           # e também multiplica por cell_size
