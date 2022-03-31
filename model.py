@@ -58,6 +58,8 @@ class YOLO(nn.Module):
                     output = model_test(input_test)                                 # calcula a saída
                     in_features_depois_flatten = output.shape[-1]                   # pega o shape da saída flatten para servir de entrada nas camadas lineares
                     camada_apos_flatten = True      # marca que essa camada é flatten e a próxima é True
+                elif (layer_type == 'dropout'):
+                    backbone_blocks.append(nn.Dropout(p=float(value)))
                 else:
                     raise "Nome de camada não reconhecida! Avaliar a estrutura novamente."
         

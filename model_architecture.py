@@ -1,12 +1,12 @@
 class model_architeture():
 
     def __init__(self):
-        CONVOLUCIONAL = [3, 32, 3, 1, 0]
+        CONVOLUCIONAL = [32, 32, 3, 1, 0]
         LEAKY_RELU = 'leaky:.1'
         MAX_POOL = 'maxpool:2'
 
         self.architecture_config = [
-            CONVOLUCIONAL,
+            [3, 32, 3, 1, 0],
             LEAKY_RELU,
             CONVOLUCIONAL,
             LEAKY_RELU,
@@ -28,6 +28,7 @@ class model_architeture():
             LEAKY_RELU,
             'flatten:',
             [-1, 1024*2], # LINEAR a entrada é calculada pelo modelo
+            'dropout:.5',
             'leaky:.1',
             [1024*2, 1024],
             'leaky:.1',
