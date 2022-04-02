@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torchvision.ops.boxes import box_iou, _box_cxcywh_to_xyxy
+from torchvision.ops.boxes import box_iou, _box_cxcywh_to_xyxy, nms
 from PIL import Image, ImageDraw
 from tqdm import tqdm
 import numpy as np
@@ -22,7 +22,7 @@ def salvar_checkpoint(model, epochs):
     }
     torch.save(checkpoint, f'./models/checkpoint_{epochs}_epochs.pth')
 
-def predict(model, img_pil, transformer, prob_threshold, print_grid):
+def predict(model, img_pil, transformer, class_threshold, iou_threshold, print_grid):
     r"""
     Função que retorna a img_pil com as anotações preditas desenhadas e suas bboxes.
 
@@ -30,7 +30,8 @@ def predict(model, img_pil, transformer, prob_threshold, print_grid):
         model: modelo yolo.
         img_pil: image PIL simples.  
         transformer: o transformador de imagepil para tensor, que é utilizado no dataset.
-        prob_threshold: limite mínimo de probabilidade de objeto para plotar uma anotação. 
+        class_threshold: limite mínimo de probabilidade de objeto para plotar uma anotação. 
+        iou_threshold: limite mínimo de IOU para eliminar os bbox com menor confiança.
         print_grid: Default False. Desenhar as grids da visão yolo.
     
     Returns:  
@@ -45,9 +46,10 @@ def predict(model, img_pil, transformer, prob_threshold, print_grid):
     with torch.no_grad():
         predictions = model(img_tensor)
     
-    predictions = predictions[0].detach().cpu()
+    predictions = predictions[0].detach().cpu().numpy()
     predictions = predictions.reshape((model.S, model.S, model.C+5))
-    img_pil, bboxes = desenhar_anotacoes(img_pil, predictions, model.S, model.C, prob_threshold=prob_threshold, print_grid=print_grid)
+    bboxes = converter_predicoes_em_bboxes(predictions, model.S, model.C, class_threshold, iou_threshold)
+    img_pil = desenhar_anotacoes(img_pil, bboxes, model.S, print_grid)
 
     return img_pil, bboxes
 
@@ -89,62 +91,93 @@ def salvar_resultado_uma_epoca(model, dataset, epoch, device, prob_threshold, sa
 
     return img_pil, bboxes
 
-def desenhar_anotacoes(img_pil, predictions_tensor, S, C, prob_threshold = 0.5, print_grid=False):
+def converter_predicoes_em_bboxes(predictions, S, C, class_threshold, iou_threshold):
     r"""
-    Função que pega uma img_pil simples e desenha as anotações a partir de predictions_tensor.
+    Esta função converte as predições em bboxes.  
+    Também vai calcular o nms para retirar bboxes do mesmo objeto. 
 
     Args:  
-        img_pil: Image PIL normal.  
-        predictions_tensor: Tensor de dimensão [S, S, (5 + C)] que pode vir da rede neural ou do próprio yolo_dataset (target)
-        S: Número de grids.  
-        C: Número de classes. 
-        prob_threshold: Limiar para considerar se tem ou não objeto. É predito pelo modelo e vem na primeira posição do bbox. 
-        pring_grid: Default false. Serve para imprimir as grids que a imagem é dividida 'virtualmente'
+        predictions: tensor (cpu) no formato que sai da rede YOLO. [S, S, (4 + 1 + C)]
+        S: Número de Grids
+        B: Número de bounding boxes
+        C: Número de classes
+        obj_threshold: limite mínimo para considerar que tem um objeto detectado.
+        class_threshold: limite mínimo para considerar a classe detectada.
+        iou_threshold: limite mínimo para considerar a interceção e eliminar o bbox de menor confiança.
     
-    Returns: 
-        img_pil: Mesma img_pil com suas anotações.
-        bboxes: Vetor numpy com as anotações transformadas em [prob_obj, prob_class, ind_class, x1, y1, x2, y2] em formato normal e absoluto.
+    Returns:  
+        bboxes: list que tem dimensão [n, 6] onde n => número de detecções e  
+        6 => [confianca, ind_classe, x1, y1, x2, y2] em formato percentual.
+
     """
-    assert predictions_tensor.shape == torch.rand((S, S, (5+C))).shape, "Tensor com shape inválido"
-
-    predictions_tensor = predictions_tensor.detach().cpu().numpy()
-
-    imgw, imgh = img_pil.size
     cell_size = 1 / S # tamanho de cada célula em percentual
-    draw = ImageDraw.Draw(img_pil)
 
-    if (print_grid):
-        for k in range(S):
-            draw.line([k*cell_size*imgw, 0, k*cell_size*imgw, imgh], fill='red', width=1)
-            draw.line([0, k*cell_size*imgh, imgw, k*cell_size*imgh], fill='red', width=1)
-    
-    contador = 0
     bboxes = []
     for l in range(S):
         for c in range(S):
-            prob_obj = predictions_tensor[l, c, 0] # probabilidade de existir um objeto
-            classes = predictions_tensor[l, c, 1:1+C] # pega os índices das classes
+            prob_obj = predictions[l, c, 0] # probabilidade de existir um objeto
+            classes = predictions[l, c, 1:1+C] # pega os índices das classes
             classes = F.softmax(torch.tensor(classes), dim=-1) # transforma os valores para softmax
             prob_class, indice_class = classes.max(0) # retorna dois tensores. A probabilidade e o índice que tem esse maior valor
             prob_class = prob_class.item()    # apenas retornando os valores normais, não o tensor
             indice_class = indice_class.item() # o mesmo de cima
 
-            if (prob_class >= prob_threshold):
-                contador += 1
-                xc_rel, yc_rel, w_rel, h_rel = predictions_tensor[l,c,1+C:]*cell_size # pega os quatro últimos valores que são coordenadas
-                x1_cell, y1_cell = c*cell_size, l*cell_size                           # e também multiplica por cell_size
+            if (prob_class >= class_threshold):
+                xc_rel, yc_rel, w_rel, h_rel = predictions[l,c,1+C:]*cell_size # pega os quatro últimos valores que são coordenadas
+                x1_cell, y1_cell = c*cell_size, l*cell_size                    # e também multiplica por cell_size
                 xc, yc = x1_cell + xc_rel, y1_cell + yc_rel         ##
                 w, h = w_rel, h_rel             #### Valores ainda em percentuais
                 x1, y1, x2, y2 = xc-w/2, yc-h/2, xc+w/2, yc+h/2     ##
 
-                x1, y1, x2, y2 = x1*imgw, y1*imgh, x2*imgw, y2*imgh
                 bboxes.append([prob_obj, prob_class, indice_class, x1, y1, x2, y2])
+    
+    bboxes = np.array(bboxes)  # conversão para numpy
+    indices = list(set(bboxes[:,2].astype(np.int))) # pegando todos os índices distintos de classes da lista
+    bboxes_por_classes = []
+    for ind in indices:
+        bboxes_aux = bboxes[bboxes[:,2] == ind] # pega o índice da classe
+        scores_aux = bboxes_aux[:,1]            # pega a confiança da predição
+        bboxes_por_classes.append([ind, bboxes_aux[:,-4:], scores_aux])  # prepara uma lista com [indice, bboxes, confiança]
 
-                draw.rectangle([x1, y1, x2, y2], fill=None, width=1, outline='black')
-                draw.rectangle([x1, y1-15, x2, y1], fill='black')
-                draw.text([x1+2, y1-13], f'{indice_class}:{round(100*prob_class)}%', fill='white')
+    bbox_final = []
+    for ind_classe, bboxes_predict, scores_predict in bboxes_por_classes:
+        indices_restantes = nms(torch.tensor(bboxes_predict), torch.tensor(scores_predict), iou_threshold=iou_threshold).detach().cpu().numpy()
+        # calcula o nms a partir dos bboxes para cada tipo de classe. 
+        scores_aux = scores_predict[indices_restantes]  # o resultado é indices_restantes, que usamos para pegar os scores
+        bboxes_aux = bboxes_predict[indices_restantes]  # e os bboxes que são dos índices restantes.
+        for score, bbox in zip(scores_aux, bboxes_aux):
+            bbox_final.append(np.hstack([[score, ind_classe], bbox])) # adiciona no formato de uma dimensão somente
+    
+    return np.array(bbox_final)
 
-    return img_pil, bboxes
+def desenhar_anotacoes(img_pil, anotacoes, S, print_grid=False):
+    r"""
+    Desenha todas as anotações que são postas no vetor anotações. 
+
+    Args:  
+        img_pil: a imagem para desenhar as anotações.  
+        anotações: vetor de dimensão [n, 6] => [confiança, indice_classe, x1, y1, x2, y2] no formato percentual.
+    
+    Returns: 
+        img_pil: Image PIL com as anotações desenhadas.
+
+    """
+    draw = ImageDraw.Draw(img_pil)
+    imgw, imgh = img_pil.size
+    cell_size = 1 / S # percentual
+
+    if (print_grid):
+        for k in range(S):
+            draw.line([k*cell_size*imgw, 0, k*cell_size*imgw, imgh], fill='black', width=1)
+            draw.line([0, k*cell_size*imgh, imgw, k*cell_size*imgh], fill='black', width=1)
+    
+    for p_class, ind_class, x1, y1, x2, y2 in anotacoes:
+        x1, y1, x2, y2 = x1*imgw, y1*imgh, x2*imgw, y2*imgh
+        draw.rectangle([x1, y1, x2, y2], fill=None, outline='red')
+        draw.rectangle([x1, y1-15, x1+40, y1], fill='red')
+        draw.text([x1+2, y1-13], f'{int(ind_class)}-{round(100*p_class)}%', fill='white')
+
+    return img_pil
 
 def validacao(model, loss_fn, dataloader, device):
     r"""
