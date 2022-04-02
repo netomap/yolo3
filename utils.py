@@ -53,7 +53,7 @@ def predict(model, img_pil, transformer, class_threshold, iou_threshold, print_g
 
     return img_pil, bboxes
 
-def salvar_resultado_uma_epoca(model, dataset, epoch, device, prob_threshold, save_img=True):
+def salvar_resultado_uma_epoca(model, dataset, epoch, class_threshold, iou_threshold, save_img=True):
     r"""
     Faz uma simples predição em uma imagem do conjunto de teste.  
     E salva na pasta ./results a imagem com as bboxes preditas pelo modelo.
@@ -62,34 +62,22 @@ def salvar_resultado_uma_epoca(model, dataset, epoch, device, prob_threshold, sa
         model: modelo yolo.
         dataset: Preferência pelo dataset do conjunto teste.
         epoch: Número da época em questão.
-        device: cuda:0 ou cpu
+        class_threshold: limite mínimo para considerar a classe detectada.
+        iou_threshold: limite mímino para excluir o bbox em regiões próximas.
         save_img: default True. Salva a imagem no diretório ./results/
     
     Returns: 
-        bboxes: As anotações da predição do modelo.
+        None
 
     """
     if (not(os.path.exists('./results/'))):
         os.mkdir('./results')
 
-    model.eval()
     img_pil = dataset.get_random_img_pil()
-    img_tensor = dataset.transformer(img_pil)
-    img_tensor = img_tensor.unsqueeze(0).to(device)
-
-    with torch.no_grad():
-        predictions = model(img_tensor)
-    
-    predictions = predictions[0].detach().cpu()
-    S = model.S
-    C = model.C
-    predictions = predictions.reshape((S, S, (5+C)))
-    img_pil, bboxes = desenhar_anotacoes(img_pil, predictions, S, C, prob_threshold=prob_threshold)
+    img_pil, _ = predict(model, img_pil, dataset.transformer, class_threshold, iou_threshold, False)
 
     if (save_img):
         img_pil.save(f'./results/result_{epoch}_epoch.jpg')
-
-    return img_pil, bboxes
 
 def converter_predicoes_em_bboxes(predictions, S, C, class_threshold, iou_threshold):
     r"""
