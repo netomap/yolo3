@@ -22,7 +22,7 @@ def salvar_checkpoint(model, epochs):
     }
     torch.save(checkpoint, f'./models/checkpoint_{epochs}_epochs.pth')
 
-def predict(model, img_pil, transformer, class_threshold, iou_threshold, print_grid):
+def predict(model, img_pil, transformer, device, class_threshold, iou_threshold, print_grid):
     r"""
     Função que retorna a img_pil com as anotações preditas desenhadas e suas bboxes.
 
@@ -44,7 +44,7 @@ def predict(model, img_pil, transformer, class_threshold, iou_threshold, print_g
     img_tensor = img_tensor.unsqueeze(0)
 
     with torch.no_grad():
-        predictions = model(img_tensor)
+        predictions = model(img_tensor.to(device))
     
     predictions = predictions[0].detach().cpu().numpy()
     predictions = predictions.reshape((model.S, model.S, model.C+5))
@@ -53,7 +53,7 @@ def predict(model, img_pil, transformer, class_threshold, iou_threshold, print_g
 
     return img_pil, bboxes
 
-def salvar_resultado_uma_epoca(model, dataset, epoch, class_threshold, iou_threshold, save_img=True):
+def salvar_resultado_uma_epoca(model, dataset, epoch, device, class_threshold, iou_threshold, save_img=True):
     r"""
     Faz uma simples predição em uma imagem do conjunto de teste.  
     E salva na pasta ./results a imagem com as bboxes preditas pelo modelo.
@@ -74,7 +74,7 @@ def salvar_resultado_uma_epoca(model, dataset, epoch, class_threshold, iou_thres
         os.mkdir('./results')
 
     img_pil = dataset.get_random_img_pil()
-    img_pil, _ = predict(model, img_pil, dataset.transformer, class_threshold, iou_threshold, False)
+    img_pil, _ = predict(model, img_pil, dataset.transformer, device, class_threshold, iou_threshold, False)
 
     if (save_img):
         img_pil.save(f'./results/result_{epoch}_epoch.jpg')
