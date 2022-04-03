@@ -5,6 +5,14 @@ Este repositório é mais um que foi desenvolvido com objetivo de aprendizado pa
 # Descrição
 
 Foram feitas outras tentativas para aprendizado e essa é uma abordagem para implementar a rede de detecção de objetos.  
+Foram feitas simplificações neste script, com intuito de aprendizado, como considerar 1 predição por cada "célula" das imagens, ou seja, B=1. 
+Assim, a saída da rede neural tem o seguinte formato:  
+
+![saida](./docs/formato_saida_classe_dataset_py.png)
+Onde S representa o número de grids que a imagem vai *"ser dividida"*.  
+C0, C1... Cn os índices das classes a qual o objeto pertence. Colocar no índice o valor 1 para a qual a classe pertence.  
+Xc, Yc representam os valores relativos do centro do objeto à posição X1, Y1 da célula *"responsável"* pelo objeto. Variam de 0 a 1.  
+W, H representam o tamanho do objeto e possuem valores relativos à imagem. Podem variar de 0 e serem maiores que 1, uma vez que o objeto pode ser maior que a "célula" responsável por ele.  
 
 # Resultados
 
