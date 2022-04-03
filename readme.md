@@ -10,15 +10,15 @@ Foram feitas outras tentativas para aprendizado e essa é uma abordagem para imp
 
 - Alguns resultados ficaram muito bons, embora precisem ser treinados por mais tempo. 
 
-![output1](./results/output1.png)  
-![output2](./results/output2.png)  
-![output3](./results/output3.png)  
-![output4](./results/output4.png)  
+![output1](./imgs_results/output1.png)  
+![output2](./imgs_results/output2.png)  
+![output3](./imgs_results/output3.png)  
+![output4](./imgs_results/output4.png)  
 
 - Já para algumas imagens onde os objetos estão muito próximos, não foi possível detectá-los, conforme exibido abaixo:  
 
-![output5](./results/output5.png)  
-![output6](./results/output6.png)  
+![output5](./imgs_results/output5.png)  
+![output6](./imgs_results/output6.png)  
 
 
 
